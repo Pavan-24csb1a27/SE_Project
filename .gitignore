@@ -21,6 +21,6 @@ build/
 .DS_Store
 Thumbs.db
 
-# IDEs
-.vscode/
-.idea/
+# Uploads
+server/uploads/*
+!server/uploads/.gitkeep

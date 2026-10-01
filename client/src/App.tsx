@@ -10,6 +10,7 @@ import { CivilianDashboard } from './pages/dashboards/CivilianDashboard';
 import { BookAppointmentPage } from './pages/civilian/BookAppointmentPage';
 import { MyAppointmentsPage } from './pages/civilian/MyAppointmentsPage';
 import { MyMedicinesPage } from './pages/civilian/MyMedicinesPage';
+import { MyReportsPage } from './pages/civilian/MyReportsPage';
 import { DoctorDashboard } from './pages/dashboards/DoctorDashboard';
 import { DoctorSchedulePage } from './pages/doctor/DoctorSchedulePage';
 import { DoctorConsultationPage } from './pages/doctor/DoctorConsultationPage';
@@ -40,6 +41,7 @@ export function App() {
               <Route path="/student/book" element={<BookAppointmentPage />} />
               <Route path="/student/appointments" element={<MyAppointmentsPage />} />
               <Route path="/student/medicines" element={<MyMedicinesPage />} />
+              <Route path="/student/reports" element={<MyReportsPage />} />
             </Route>
 
             {/* Protected Doctor Routes */}

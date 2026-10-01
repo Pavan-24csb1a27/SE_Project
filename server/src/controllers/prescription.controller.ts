@@ -117,3 +117,104 @@ export const getPrescriptions = async (
     });
   }
 };
+
+// REQ 4.7: Update single medicine dispensation status (Pharmacy Staff)
+export const updateItemDistribution = async (
+  req: AuthenticatedRequest,
+  res: Response
+): Promise<void> => {
+  try {
+    const { id, itemIndex } = req.params;
+    const { isDistributed } = req.body;
+
+    const prescription = await Prescription.findById(id);
+    if (!prescription) {
+      res.status(404).json({ success: false, message: 'Prescription not found.' });
+      return;
+    }
+
+    const idx = parseInt(itemIndex, 10);
+    if (isNaN(idx) || idx < 0 || idx >= prescription.medicines.length) {
+      res.status(400).json({ success: false, message: 'Invalid medicine item index.' });
+      return;
+    }
+
+    prescription.medicines[idx].isDistributed = isDistributed;
+    await prescription.save();
+
+    res.status(200).json({
+      success: true,
+      message: `Medicine ${prescription.medicines[idx].name} marked as ${
+        isDistributed ? 'distributed' : 'undistributed'
+      }.`,
+      prescription,
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to update medicine distribution status.',
+    });
+  }
+};
+
+// REQ 4.7: Close Prescription (Pharmacy Staff)
+// REQ_02: The system shall only allow a prescription to be closed once all medicine items are marked as distributed.
+// REQ_03: The system shall update the prescription status to "closed" upon confirmation.
+// REQ_04: The system shall record the closure date and the Pharmacy staff member who closed the prescription.
+export const closePrescription = async (
+  req: AuthenticatedRequest,
+  res: Response
+): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const pharmacyStaffId = req.user?.userId;
+
+    const prescription = await Prescription.findById(id).populate(
+      'civilianId',
+      'name email phone'
+    );
+
+    if (!prescription) {
+      res.status(404).json({ success: false, message: 'Prescription not found.' });
+      return;
+    }
+
+    if (prescription.status === 'closed') {
+      res.status(400).json({ success: false, message: 'Prescription is already closed.' });
+      return;
+    }
+
+    // REQ_02 Check: All medicines must be marked distributed
+    const undistributed = prescription.medicines.filter((m) => !m.isDistributed);
+    if (undistributed.length > 0) {
+      res.status(400).json({
+        success: false,
+        message: `Cannot close prescription. ${undistributed.length} medicine item(s) are still undistributed. All items must be verified before closure (SRS REQ_02).`,
+        undistributedItems: undistributed.map((m) => m.name),
+      });
+      return;
+    }
+
+    // REQ_03 & REQ_04: Update status to "closed", record closure date & pharmacy staff
+    prescription.status = 'closed';
+    prescription.closedAt = new Date();
+    prescription.closedBy = new mongoose.Types.ObjectId(pharmacyStaffId);
+    await prescription.save();
+
+    console.log(
+      `[Pharmacy] ✅ Prescription ${prescription.prescriptionNumber} officially closed by Staff ${pharmacyStaffId} on ${prescription.closedAt.toISOString()}`
+    );
+
+    res.status(200).json({
+      success: true,
+      message: 'Prescription marked as closed and archived.',
+      prescription,
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to close prescription.',
+    });
+  }
+};
+

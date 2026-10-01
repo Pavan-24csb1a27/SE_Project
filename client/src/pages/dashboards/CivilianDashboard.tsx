@@ -90,7 +90,10 @@ export const CivilianDashboard: React.FC = () => {
           <p className="mt-1 text-xs text-emerald-600 font-medium">View Medicines & Tests →</p>
         </Link>
 
-        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs hover:border-indigo-400 hover:shadow-sm transition cursor-pointer">
+        <Link
+          to="/student/reports"
+          className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs hover:border-purple-400 hover:shadow-sm transition block"
+        >
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
               Clinical Reports
@@ -100,8 +103,8 @@ export const CivilianDashboard: React.FC = () => {
             </div>
           </div>
           <p className="mt-3 text-2xl font-bold text-slate-900">Lab Results</p>
-          <p className="mt-1 text-xs text-purple-600 font-medium">View Tests (Phase 4) →</p>
-        </div>
+          <p className="mt-1 text-xs text-purple-600 font-medium">View & Download (REQ 4.3) →</p>
+        </Link>
       </div>
 
       {/* Upcoming Visits Feed */}

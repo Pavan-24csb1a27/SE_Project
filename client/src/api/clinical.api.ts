@@ -130,4 +130,30 @@ export const clinicalApi = {
     }>('/clinical/referrals', { params });
     return res.data;
   },
+
+  updateItemDistribution: async (
+    prescriptionId: string,
+    itemIndex: number,
+    isDistributed: boolean
+  ): Promise<{ success: boolean; message: string; prescription: Prescription }> => {
+    const res = await apiClient.patch<{
+      success: boolean;
+      message: string;
+      prescription: Prescription;
+    }>(`/prescriptions/${prescriptionId}/items/${itemIndex}/distribute`, {
+      isDistributed,
+    });
+    return res.data;
+  },
+
+  closePrescription: async (
+    prescriptionId: string
+  ): Promise<{ success: boolean; message: string; prescription: Prescription }> => {
+    const res = await apiClient.patch<{
+      success: boolean;
+      message: string;
+      prescription: Prescription;
+    }>(`/prescriptions/${prescriptionId}/close`);
+    return res.data;
+  },
 };
