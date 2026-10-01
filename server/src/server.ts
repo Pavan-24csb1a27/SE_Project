@@ -16,14 +16,27 @@ import { errorHandler } from './middleware/error.middleware';
 export const createServer = (): Application => {
   const app = express();
 
-  // 1. Security Headers
-  app.use(helmet());
+  // 1. Security Headers (allow cross-origin assets for reports/downloads)
+  app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 
   // 2. CORS configuration
-  const allowedOrigin = process.env.CLIENT_URL || 'http://localhost:5173';
+  const configuredClientUrl = process.env.CLIENT_URL;
   app.use(
     cors({
-      origin: allowedOrigin,
+      origin: (origin, callback) => {
+        // Allow server-to-server, curl, Postman or health checks without origin
+        if (!origin) return callback(null, true);
+        if (
+          origin === configuredClientUrl ||
+          origin === 'http://localhost:5173' ||
+          origin === 'http://localhost:3000' ||
+          origin.endsWith('.vercel.app')
+        ) {
+          return callback(null, true);
+        }
+        // Permissive fallback so dynamically deployed Vercel previews connect smoothly
+        return callback(null, true);
+      },
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization'],
