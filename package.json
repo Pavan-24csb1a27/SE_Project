@@ -17,7 +17,8 @@
     "test:pharmacy": "npm --prefix server run test:pharmacy",
     "test:admin": "npm --prefix server run test:admin",
     "test:master": "npm --prefix server run test:master",
-    "test": "npm run test:master"
+    "test:century": "npm --prefix server run test:century",
+    "test": "npm run test:century"
   },
   "keywords": ["unihealth", "mern", "react", "express", "mongodb", "healthcare"],
   "author": "UniHealth Project Team",

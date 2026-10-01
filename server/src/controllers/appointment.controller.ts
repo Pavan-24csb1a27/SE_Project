@@ -221,6 +221,11 @@ export const cancelAppointment = async (
       return;
     }
 
+    if (appointment.status === 'completed') {
+      res.status(400).json({ success: false, message: 'Completed appointments cannot be cancelled.' });
+      return;
+    }
+
     appointment.status = 'cancelled';
     appointment.cancellationReason = cancellationReason || 'Cancelled by user';
     await appointment.save();
