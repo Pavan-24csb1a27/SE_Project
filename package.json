@@ -1,0 +1,16 @@
+{
+  "name": "unihealth-monorepo",
+  "version": "1.0.0",
+  "description": "UniHealth - Integrated University Health Center Portal",
+  "scripts": {
+    "dev:server": "npm --prefix server run dev",
+    "dev:client": "npm --prefix client run dev",
+    "build:server": "npm --prefix server run build",
+    "build:client": "npm --prefix client run build",
+    "build": "npm run build:server && npm run build:client",
+    "test:auth": "npm --prefix server run test:auth"
+  },
+  "keywords": ["unihealth", "mern", "react", "express", "mongodb", "healthcare"],
+  "author": "UniHealth Project Team",
+  "license": "ISC"
+}

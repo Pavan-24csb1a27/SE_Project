@@ -1,0 +1,61 @@
+import { useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { useAuthStore } from './store/authStore';
+import { Navbar } from './components/Navbar';
+import { ProtectedRoute } from './components/ProtectedRoute';
+import { HomePage } from './pages/HomePage';
+import { LoginPage } from './pages/auth/LoginPage';
+import { RegisterPage } from './pages/auth/RegisterPage';
+import { CivilianDashboard } from './pages/dashboards/CivilianDashboard';
+import { DoctorDashboard } from './pages/dashboards/DoctorDashboard';
+import { PharmacyDashboard } from './pages/dashboards/PharmacyDashboard';
+import { AdminDashboard } from './pages/dashboards/AdminDashboard';
+
+export function App() {
+  const { checkAuth } = useAuthStore();
+
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
+
+  return (
+    <BrowserRouter>
+      <div className="min-h-screen flex flex-col bg-slate-50">
+        <Navbar />
+        <main className="flex-1">
+          <Routes>
+            {/* Public Routes */}
+            <Route path="/" element={<HomePage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+
+            {/* Protected Civilian / Student Routes */}
+            <Route element={<ProtectedRoute allowedRoles={['civilian', 'admin']} />}>
+              <Route path="/student" element={<CivilianDashboard />} />
+            </Route>
+
+            {/* Protected Doctor Routes */}
+            <Route element={<ProtectedRoute allowedRoles={['doctor', 'admin']} />}>
+              <Route path="/doctor" element={<DoctorDashboard />} />
+            </Route>
+
+            {/* Protected Pharmacy Routes */}
+            <Route element={<ProtectedRoute allowedRoles={['pharmacy', 'admin']} />}>
+              <Route path="/pharmacy" element={<PharmacyDashboard />} />
+            </Route>
+
+            {/* Protected Admin Routes */}
+            <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
+              <Route path="/admin" element={<AdminDashboard />} />
+            </Route>
+
+            {/* Fallback */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </main>
+      </div>
+    </BrowserRouter>
+  );
+}
+
+export default App;
