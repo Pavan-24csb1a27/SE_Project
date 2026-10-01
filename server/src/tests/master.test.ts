@@ -9,7 +9,7 @@ const TEST_DB_URI = process.env.MONGODB_URI_TEST || 'mongodb://127.0.0.1:27017/u
 
 async function runMasterTestSuite() {
   console.log('================================================================');
-  console.log('   UNIHEALTH END-TO-END MASTER TEST SUITE (PHASES 1, 2, 3)     ');
+  console.log(' UNIHEALTH END-TO-END MASTER TEST SUITE (PHASES 1, 2, 3, 4, 5)  ');
   console.log('================================================================\n');
 
   let passed = 0;
@@ -465,6 +465,144 @@ async function runMasterTestSuite() {
       .set('Authorization', `Bearer ${studentToken}`);
     assert('Student views specialist recommendation card', studentRefsRes.status === 200 && studentRefsRes.body.count >= 1);
     assert('Specialist recommendation includes referring and recommended doctors', !!studentRefsRes.body.referrals[0].recommendedDoctorId.name);
+
+    // =========================================================================
+    // SECTION 4: PHASE 4 - PHARMACY DISPENSATION & CLINICAL REPORTS
+    // =========================================================================
+    console.log('\n--- SECTION 4: PHARMACY DISPENSATION & CLINICAL REPORTS ---');
+
+    // TEST 39: REQ 4.7 & REQ_01: Pharmacy Staff Views Open Prescriptions Queue
+    const pharmQueueRes = await request(app)
+      .get('/api/v1/prescriptions?status=open')
+      .set('Authorization', `Bearer ${pharmacyToken}`);
+    assert('REQ_01: Pharmacy staff views open prescriptions queue', pharmQueueRes.status === 200 && pharmQueueRes.body.prescriptions.length >= 1);
+
+    // TEST 40: REQ_02: Premature Close Rejected When Items Undistributed
+    const prematureCloseRes = await request(app)
+      .patch(`/api/v1/prescriptions/${issuedPrescriptionId}/close`)
+      .set('Authorization', `Bearer ${pharmacyToken}`);
+    assert('REQ_02: Cannot close prescription when items are undistributed (400 Bad Request)', prematureCloseRes.status === 400);
+
+    // TEST 41: Pharmacy Marks Item 0 Distributed
+    const distItem0Res = await request(app)
+      .patch(`/api/v1/prescriptions/${issuedPrescriptionId}/items/0/distribute`)
+      .set('Authorization', `Bearer ${pharmacyToken}`)
+      .send({ isDistributed: true });
+    assert('Pharmacy marks medicine item 0 as distributed', distItem0Res.status === 200 && distItem0Res.body.prescription.medicines[0].isDistributed === true);
+
+    // TEST 42: REQ_02: Close Still Rejected When Even 1 Item Is Undistributed
+    const prematureCloseRes2 = await request(app)
+      .patch(`/api/v1/prescriptions/${issuedPrescriptionId}/close`)
+      .set('Authorization', `Bearer ${pharmacyToken}`);
+    assert('REQ_02: Closing rejected when remaining items are undistributed', prematureCloseRes2.status === 400);
+
+    // TEST 43: Pharmacy Marks Item 1 Distributed
+    const distItem1Res = await request(app)
+      .patch(`/api/v1/prescriptions/${issuedPrescriptionId}/items/1/distribute`)
+      .set('Authorization', `Bearer ${pharmacyToken}`)
+      .send({ isDistributed: true });
+    assert('Pharmacy marks medicine item 1 as distributed', distItem1Res.status === 200 && distItem1Res.body.prescription.medicines[1].isDistributed === true);
+
+    // TEST 44: REQ_03 & REQ_04: Pharmacy Successfully Closes Prescription
+    const finalCloseRes = await request(app)
+      .patch(`/api/v1/prescriptions/${issuedPrescriptionId}/close`)
+      .set('Authorization', `Bearer ${pharmacyToken}`);
+    assert('REQ_03: Prescription successfully closed upon all items distributed', finalCloseRes.status === 200 && finalCloseRes.body.prescription.status === 'closed');
+    assert('REQ_04: System records closure timestamp and staff member', !!finalCloseRes.body.prescription.closedAt && !!finalCloseRes.body.prescription.closedBy);
+
+    // TEST 45: REQ 4.3: Upload Clinical Report
+    const dummyPdf = Buffer.from('%PDF-1.4 Mock Lab Report Content');
+    const uploadReportRes = await request(app)
+      .post('/api/v1/reports/upload')
+      .set('Authorization', `Bearer ${studentToken}`)
+      .field('reportTitle', 'Complete Blood Count (CBC) Panel')
+      .field('notes', 'Routine checkup blood analysis')
+      .attach('file', dummyPdf, 'cbc_test.pdf');
+    assert('REQ 4.3: Upload clinical report returns 201 Created', uploadReportRes.status === 201 && !!uploadReportRes.body.report._id);
+    const uploadedReportId = uploadReportRes.body.report._id;
+
+    // TEST 46: REQ_01 & REQ_02: Student Views Reports List
+    const getReportsRes = await request(app)
+      .get('/api/v1/reports')
+      .set('Authorization', `Bearer ${studentToken}`);
+    assert('REQ_01 & REQ_02: Student views reports list with metadata', getReportsRes.status === 200 && getReportsRes.body.count >= 1);
+
+    // TEST 47: REQ_03: Download Selected Report File
+    const downloadReportRes = await request(app)
+      .get(`/api/v1/reports/${uploadedReportId}/download`)
+      .set('Authorization', `Bearer ${studentToken}`);
+    assert('REQ_03: Student downloads selected report file (200 OK)', downloadReportRes.status === 200);
+
+    // =========================================================================
+    // SECTION 5: PHASE 5 - ADMINISTRATION, ANALYTICS & AUDIT LOGGING
+    // =========================================================================
+    console.log('\n--- SECTION 5: ADMINISTRATION, ANALYTICS & AUDIT LOGGING ---');
+
+    // TEST 48: RBAC: Civilian Blocked from Admin Analytics
+    const unauthorizedAnalyticsRes = await request(app)
+      .get('/api/v1/admin/analytics')
+      .set('Authorization', `Bearer ${studentToken}`);
+    assert('Civilian role blocked from admin analytics (403 Forbidden)', unauthorizedAnalyticsRes.status === 403);
+
+    // TEST 49: Admin Fetches Aggregated Operational Analytics
+    const adminAnalyticsRes = await request(app)
+      .get('/api/v1/admin/analytics')
+      .set('Authorization', `Bearer ${adminToken}`);
+    assert('Admin receives 200 OK with aggregated clinic analytics', adminAnalyticsRes.status === 200);
+    assert('Analytics contains accurate user breakdown', adminAnalyticsRes.body.data.users.totalUsers >= 5);
+    assert('Analytics contains appointment and prescription metrics',
+      adminAnalyticsRes.body.data.appointments.total >= 1 &&
+      adminAnalyticsRes.body.data.prescriptions.closed >= 1
+    );
+
+    // TEST 50: Admin Filters and Searches User Directory
+    const userDirRes = await request(app)
+      .get('/api/v1/admin/users?role=civilian')
+      .set('Authorization', `Bearer ${adminToken}`);
+    assert('Admin filters user directory by role (civilian)', userDirRes.status === 200 && userDirRes.body.data.length >= 1);
+
+    // TEST 51: Admin Deactivates (Suspends) User Account
+    const suspendRes = await request(app)
+      .patch(`/api/v1/admin/users/${studentId}/status`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ isActive: false });
+    assert('Admin suspends student account (200 OK)', suspendRes.status === 200 && suspendRes.body.data.isActive === false);
+
+    // TEST 52: Suspended User Blocked from Logging In
+    const suspendedLoginRes = await request(app)
+      .post('/api/v1/auth/login')
+      .send({
+        identifier: '24CSB1A24',
+        password: 'Password123!',
+      });
+    assert('Suspended account rejected on login (403 Forbidden)', suspendedLoginRes.status === 403);
+
+    // TEST 53: Admin Reactivates Suspended User Account
+    const reactivateRes = await request(app)
+      .patch(`/api/v1/admin/users/${studentId}/status`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ isActive: true });
+    assert('Admin reactivates student account', reactivateRes.status === 200 && reactivateRes.body.data.isActive === true);
+
+    // TEST 54: Admin Self-Deactivation Guard
+    const selfDeactivateRes = await request(app)
+      .patch('/api/v1/admin/users/60c72b2f9f1b2c001f8e4caa/status') // fake or own
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ isActive: false });
+    // Should be 400 or 404
+    assert('Admin self-deactivation or invalid user guarded', selfDeactivateRes.status >= 400);
+
+    // TEST 55: Admin Queries Immutable Audit Trail Logs
+    const auditLogsRes = await request(app)
+      .get('/api/v1/admin/audit-logs')
+      .set('Authorization', `Bearer ${adminToken}`);
+    assert('Admin retrieves audit trail log records', auditLogsRes.status === 200 && auditLogsRes.body.data.length >= 1);
+
+    // TEST 56: Verify Audit Trail Recorded Clinical and Administrative Events
+    const actionsLogged = auditLogsRes.body.data.map((l: any) => l.action);
+    const hasStatusUpdate = actionsLogged.includes('USER_STATUS_UPDATE');
+    const hasPrescriptionClosed = actionsLogged.includes('PRESCRIPTION_CLOSED');
+    assert('Audit trail recorded USER_STATUS_UPDATE and PRESCRIPTION_CLOSED events', hasStatusUpdate && hasPrescriptionClosed);
 
   } catch (error) {
     console.error('Master Test Suite Execution Error:', error);

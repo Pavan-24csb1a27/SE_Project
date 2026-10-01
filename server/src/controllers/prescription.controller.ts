@@ -5,6 +5,7 @@ import { User } from '../models/User.model';
 import { Appointment } from '../models/Appointment.model';
 import { AuthenticatedRequest } from '../middleware/auth.middleware';
 import { sendAppointmentNotification } from '../services/notification.service';
+import { AuditService } from '../services/audit.service';
 
 const generatePrescriptionNumber = (): string => {
   const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
@@ -61,6 +62,22 @@ export const addPrescription = async (
       date: new Date().toISOString().split('T')[0],
       timeSlot: 'Prescription Available',
       type: 'CONFIRMATION',
+    });
+
+    // Audit Log
+    AuditService.log({
+      actorId: doctor._id,
+      actorName: doctor.name,
+      actorRole: 'doctor',
+      action: 'PRESCRIPTION_CREATED',
+      targetEntity: 'Prescription',
+      targetId: prescription._id.toString(),
+      details: {
+        prescriptionNumber,
+        civilian: civilian.name,
+        medicinesCount: medicines.length,
+      },
+      ipAddress: req.ip,
     });
 
     res.status(201).json({
@@ -142,6 +159,22 @@ export const updateItemDistribution = async (
     prescription.medicines[idx].isDistributed = isDistributed;
     await prescription.save();
 
+    // Audit Log
+    AuditService.log({
+      actorId: req.user?.userId || 'unknown',
+      actorName: req.user?.universityId || 'Pharmacy Staff',
+      actorRole: req.user?.role as any || 'pharmacy',
+      action: 'PRESCRIPTION_ITEM_DISTRIBUTED',
+      targetEntity: 'Prescription',
+      targetId: prescription._id.toString(),
+      details: {
+        prescriptionNumber: prescription.prescriptionNumber,
+        medicine: prescription.medicines[idx].name,
+        isDistributed,
+      },
+      ipAddress: req.ip,
+    });
+
     res.status(200).json({
       success: true,
       message: `Medicine ${prescription.medicines[idx].name} marked as ${
@@ -204,6 +237,22 @@ export const closePrescription = async (
     console.log(
       `[Pharmacy] ✅ Prescription ${prescription.prescriptionNumber} officially closed by Staff ${pharmacyStaffId} on ${prescription.closedAt.toISOString()}`
     );
+
+    // Audit Log
+    AuditService.log({
+      actorId: pharmacyStaffId || 'unknown',
+      actorName: req.user?.universityId || 'Pharmacy Staff',
+      actorRole: req.user?.role as any || 'pharmacy',
+      action: 'PRESCRIPTION_CLOSED',
+      targetEntity: 'Prescription',
+      targetId: prescription._id.toString(),
+      details: {
+        prescriptionNumber: prescription.prescriptionNumber,
+        civilian: (prescription.civilianId as any)?.name,
+        closedAt: prescription.closedAt,
+      },
+      ipAddress: req.ip,
+    });
 
     res.status(200).json({
       success: true,

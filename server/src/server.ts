@@ -10,6 +10,7 @@ import medicalRecordRoutes from './routes/medicalRecord.routes';
 import prescriptionRoutes from './routes/prescription.routes';
 import clinicalRoutes from './routes/clinical.routes';
 import reportRoutes from './routes/report.routes';
+import adminRoutes from './routes/admin.routes';
 import { errorHandler } from './middleware/error.middleware';
 
 export const createServer = (): Application => {
@@ -57,6 +58,7 @@ export const createServer = (): Application => {
   app.use('/api/v1/prescriptions', prescriptionRoutes);
   app.use('/api/v1/clinical', clinicalRoutes);
   app.use('/api/v1/reports', reportRoutes);
+  app.use('/api/v1/admin', adminRoutes);
 
   // 7. 404 Handler
   app.use((_req: Request, res: Response) => {

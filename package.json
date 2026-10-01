@@ -12,6 +12,7 @@
     "test:booking": "npm --prefix server run test:booking",
     "test:clinical": "npm --prefix server run test:clinical",
     "test:pharmacy": "npm --prefix server run test:pharmacy",
+    "test:admin": "npm --prefix server run test:admin",
     "test:master": "npm --prefix server run test:master",
     "test": "npm run test:master"
   },

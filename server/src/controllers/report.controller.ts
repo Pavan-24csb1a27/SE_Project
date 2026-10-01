@@ -5,6 +5,7 @@ import fs from 'fs';
 import { ClinicalReport } from '../models/ClinicalReport.model';
 import { User } from '../models/User.model';
 import { AuthenticatedRequest } from '../middleware/auth.middleware';
+import { AuditService } from '../services/audit.service';
 
 // REQ 4.3: Upload Report (Civilian or Doctor)
 export const uploadReport = async (
@@ -55,6 +56,22 @@ export const uploadReport = async (
       fileSize: file.size,
       reportDate: reportDate ? new Date(reportDate) : new Date(),
       notes,
+    });
+
+    // Audit Log
+    AuditService.log({
+      actorId: uploaderId,
+      actorName: req.user?.universityId || 'Uploader',
+      actorRole: uploaderRole as any,
+      action: 'REPORT_UPLOADED',
+      targetEntity: 'ClinicalReport',
+      targetId: report._id.toString(),
+      details: {
+        reportTitle: report.reportTitle,
+        fileType: report.fileType,
+        patient: civilian.name,
+      },
+      ipAddress: req.ip,
     });
 
     res.status(201).json({
@@ -135,6 +152,21 @@ export const downloadReport = async (
       res.status(404).json({ success: false, message: 'Document file missing on storage server.' });
       return;
     }
+
+    // Audit Log
+    AuditService.log({
+      actorId: userId || 'unknown',
+      actorName: req.user?.universityId || 'Downloader',
+      actorRole: role as any,
+      action: 'REPORT_DOWNLOADED',
+      targetEntity: 'ClinicalReport',
+      targetId: report._id.toString(),
+      details: {
+        reportTitle: report.reportTitle,
+        fileType: report.fileType,
+      },
+      ipAddress: req.ip,
+    });
 
     res.download(filePath, `${report.reportTitle}.${report.fileType}`);
   } catch (error: any) {

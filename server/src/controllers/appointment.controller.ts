@@ -5,6 +5,7 @@ import { DoctorAvailability } from '../models/DoctorAvailability.model';
 import { User } from '../models/User.model';
 import { AuthenticatedRequest } from '../middleware/auth.middleware';
 import { sendAppointmentNotification } from '../services/notification.service';
+import { AuditService } from '../services/audit.service';
 
 const generateAppointmentNumber = (date: string): string => {
   const cleanDate = date.replace(/-/g, '');
@@ -113,6 +114,23 @@ export const bookAppointment = async (
       type: 'CONFIRMATION',
     });
 
+    // Audit Log
+    AuditService.log({
+      actorId: civilian._id,
+      actorName: civilian.name,
+      actorRole: 'civilian',
+      action: 'APPOINTMENT_BOOKED',
+      targetEntity: 'Appointment',
+      targetId: newAppointment._id.toString(),
+      details: {
+        appointmentNumber,
+        doctor: doctor.name,
+        date,
+        slot: `${matchedSlot.startTime} - ${matchedSlot.endTime}`,
+      },
+      ipAddress: req.ip,
+    });
+
     res.status(201).json({
       success: true,
       message: 'Appointment booked and confirmed successfully.',
@@ -178,6 +196,11 @@ export const cancelAppointment = async (
     const userId = req.user?.userId;
     const role = req.user?.role;
 
+    if (!userId) {
+      res.status(401).json({ success: false, message: 'Unauthenticated.' });
+      return;
+    }
+
     const appointment = await Appointment.findById(id)
       .populate('doctorId', 'name email')
       .populate('civilianId', 'name email phone');
@@ -232,6 +255,21 @@ export const cancelAppointment = async (
       date: appointment.date,
       timeSlot: `${appointment.timeSlot.startTime} - ${appointment.timeSlot.endTime}`,
       type: 'CANCELLATION',
+    });
+
+    // Audit Log
+    AuditService.log({
+      actorId: userId,
+      actorName: req.user?.role === 'civilian' ? civilian.name : (req.user?.universityId || 'Staff'),
+      actorRole: role as any,
+      action: 'APPOINTMENT_CANCELLED',
+      targetEntity: 'Appointment',
+      targetId: appointment._id.toString(),
+      details: {
+        appointmentNumber: appointment.appointmentNumber,
+        reason: cancellationReason || 'Cancelled by user',
+      },
+      ipAddress: req.ip,
     });
 
     res.status(200).json({

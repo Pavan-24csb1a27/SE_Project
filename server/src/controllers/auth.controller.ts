@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import { User, IUser } from '../models/User.model';
 import { generateToken, AuthenticatedRequest } from '../middleware/auth.middleware';
+import { AuditService } from '../services/audit.service';
 
 const COOKIE_NAME = 'token';
 const isProduction = process.env.NODE_ENV === 'production';
@@ -73,6 +74,17 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 
     setAuthCookie(res, token);
 
+    AuditService.log({
+      actorId: newUser._id,
+      actorName: newUser.name,
+      actorRole: newUser.role,
+      action: 'USER_REGISTER',
+      targetEntity: 'User',
+      targetId: newUser._id.toString(),
+      details: { role: newUser.role, universityId: newUser.universityId },
+      ipAddress: req.ip,
+    });
+
     res.status(201).json({
       success: true,
       message: 'User registered successfully.',
@@ -133,6 +145,17 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     });
 
     setAuthCookie(res, token);
+
+    AuditService.log({
+      actorId: user._id,
+      actorName: user.name,
+      actorRole: user.role,
+      action: 'USER_LOGIN',
+      targetEntity: 'User',
+      targetId: user._id.toString(),
+      details: { role: user.role },
+      ipAddress: req.ip,
+    });
 
     res.status(200).json({
       success: true,

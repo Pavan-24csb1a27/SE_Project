@@ -4,6 +4,7 @@ import { MedicalRecord } from '../models/MedicalRecord.model';
 import { Appointment } from '../models/Appointment.model';
 import { User } from '../models/User.model';
 import { AuthenticatedRequest } from '../middleware/auth.middleware';
+import { AuditService } from '../services/audit.service';
 
 export const getPatientRecord = async (
   req: AuthenticatedRequest,
@@ -48,6 +49,20 @@ export const getPatientRecord = async (
     // Safety Requirement REQ 5.2: Flag critical allergy alerts
     const criticalAllergies = record.allergies.filter((a) => a.severity === 'critical');
     const hasCriticalAlerts = criticalAllergies.length > 0 || record.chronicConditions.length > 0;
+
+    // Audit log access if doctor or admin
+    if (requesterRole !== 'civilian') {
+      AuditService.log({
+        actorId: requesterId || 'unknown',
+        actorName: req.user?.universityId || 'Staff',
+        actorRole: requesterRole as any,
+        action: 'MEDICAL_RECORD_ACCESSED',
+        targetEntity: 'MedicalRecord',
+        targetId: record._id.toString(),
+        details: { patient: civilian.name, universityId: civilian.universityId },
+        ipAddress: req.ip,
+      });
+    }
 
     res.status(200).json({
       success: true,
