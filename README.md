@@ -33,10 +33,25 @@ For complete architectural diagrams, database schemas, and end-to-end feature pi
   - `DoctorSchedulePage.tsx`: Clinician working hours and shift configuration portal.
 - **Tests:** 10/10 tests passing (`npm --prefix server run test:booking`).
 
+### Phase 3: Clinical Care, Prescriptions & Allergy Alerts (Completed)
+- **Medical Records & Safety Banner (`REQ 5.2`):**
+  - Schema with blood group, allergies (severity: mild, moderate, critical), chronic conditions, and consultation history.
+  - `CriticalAllergyBanner.tsx`: High-contrast sticky red alert banner displayed prominently at point of care, highlighting critical drug contraindications.
+- **Digital Prescriptions Desk (`REQ 4.4`):**
+  - `PrescriptionBuilder.tsx`: Dynamic medicine item builder enforcing mandatory name, dosage, frequency, duration (`REQ_02`).
+  - Prescriptions saved with status `"open"` (`REQ_03`) and notified to the Campus Pharmacy (`REQ_04`).
+- **Diagnostic Lab Orders (`REQ 4.5`):**
+  - Lab test orders (CBC, fasting glucose, X-ray, cultures) linked to patient record with preparation instructions; student notified.
+- **Specialist Doctor Referral (`REQ 4.6`):**
+  - In-system clinician referrals to registered specialists without automatic booking (`REQ_04`); student receives recommendation and books slot manually.
+- **Student Medicine & Labs Portal (`REQ 4.2`):**
+  - `MyMedicinesPage.tsx`: Displays prescribed medicines, dosage, frequency, duration, prescribing doctor, and issue date.
+  - Tabs for viewing pending diagnostic tests and booking recommended specialist slots.
+- **Tests:** 9/9 tests passing (`npm --prefix server run test:clinical`).
+
 ---
 
 ## 📋 Next Phases Roadmap
-- **Phase 3:** Patient Medical Records, Point-of-Care Allergy Banners (`REQ 5.2`), Digital Prescriptions (`REQ 4.4`), Diagnostic Lab Orders (`REQ 4.5`), & Specialist Doctor Referrals (`REQ 4.6`).
 - **Phase 4:** Pharmacy Dispensation Tracking, Prescription Closure Guard (`REQ 4.7`), & S3/Cloudinary Clinical Reports (`REQ 4.3`).
 - **Phase 5:** Admin System Analytics, Audit Trail Logging & Compliance.
 

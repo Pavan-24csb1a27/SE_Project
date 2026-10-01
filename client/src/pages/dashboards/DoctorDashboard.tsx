@@ -150,10 +150,20 @@ export const DoctorDashboard: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
                   <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-800 uppercase">
                     {appt.status}
                   </span>
+
+                  {appt.civilianId && (
+                    <Link
+                      to={`/doctor/consultation/${appt.civilianId._id}`}
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-700 px-3.5 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-emerald-800 transition"
+                    >
+                      <Stethoscope className="h-3.5 w-3.5" />
+                      <span>Start Consultation</span>
+                    </Link>
+                  )}
                 </div>
               </div>
             ))}

@@ -8,7 +8,8 @@
     "start": "node dist/index.js",
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "test:auth": "ts-node src/tests/auth.test.ts",
-    "test:booking": "ts-node src/tests/booking.test.ts"
+    "test:booking": "ts-node src/tests/booking.test.ts",
+    "test:clinical": "ts-node src/tests/clinical.test.ts"
   },
   "keywords": ["unihealth", "m-health", "university-clinic", "express", "mongoose"],
   "author": "UniHealth Project Team",

@@ -6,6 +6,9 @@ import cookieParser from 'cookie-parser';
 import authRoutes from './routes/auth.routes';
 import availabilityRoutes from './routes/availability.routes';
 import appointmentRoutes from './routes/appointment.routes';
+import medicalRecordRoutes from './routes/medicalRecord.routes';
+import prescriptionRoutes from './routes/prescription.routes';
+import clinicalRoutes from './routes/clinical.routes';
 import { errorHandler } from './middleware/error.middleware';
 
 export const createServer = (): Application => {
@@ -49,6 +52,9 @@ export const createServer = (): Application => {
   app.use('/api/v1/auth', authRoutes);
   app.use('/api/v1/availability', availabilityRoutes);
   app.use('/api/v1/appointments', appointmentRoutes);
+  app.use('/api/v1/medical-records', medicalRecordRoutes);
+  app.use('/api/v1/prescriptions', prescriptionRoutes);
+  app.use('/api/v1/clinical', clinicalRoutes);
 
   // 7. 404 Handler
   app.use((_req: Request, res: Response) => {
