@@ -7,7 +7,10 @@ import { HomePage } from './pages/HomePage';
 import { LoginPage } from './pages/auth/LoginPage';
 import { RegisterPage } from './pages/auth/RegisterPage';
 import { CivilianDashboard } from './pages/dashboards/CivilianDashboard';
+import { BookAppointmentPage } from './pages/civilian/BookAppointmentPage';
+import { MyAppointmentsPage } from './pages/civilian/MyAppointmentsPage';
 import { DoctorDashboard } from './pages/dashboards/DoctorDashboard';
+import { DoctorSchedulePage } from './pages/doctor/DoctorSchedulePage';
 import { PharmacyDashboard } from './pages/dashboards/PharmacyDashboard';
 import { AdminDashboard } from './pages/dashboards/AdminDashboard';
 
@@ -32,11 +35,14 @@ export function App() {
             {/* Protected Civilian / Student Routes */}
             <Route element={<ProtectedRoute allowedRoles={['civilian', 'admin']} />}>
               <Route path="/student" element={<CivilianDashboard />} />
+              <Route path="/student/book" element={<BookAppointmentPage />} />
+              <Route path="/student/appointments" element={<MyAppointmentsPage />} />
             </Route>
 
             {/* Protected Doctor Routes */}
             <Route element={<ProtectedRoute allowedRoles={['doctor', 'admin']} />}>
               <Route path="/doctor" element={<DoctorDashboard />} />
+              <Route path="/doctor/schedule" element={<DoctorSchedulePage />} />
             </Route>
 
             {/* Protected Pharmacy Routes */}

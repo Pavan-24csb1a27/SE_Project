@@ -7,37 +7,38 @@ For complete architectural diagrams, database schemas, and end-to-end feature pi
 
 ---
 
-## 🚀 Phase 1 Foundation: Implemented & Verified
+## 🚀 Implemented Phases
 
-### Backend (`/server`)
-- **Technology:** Node.js, Express.js, TypeScript, Mongoose ODM, Zod.
-- **Authentication:** JWT tokens issued upon login and stored in secure HTTP-only cookies (with Bearer token fallback).
+### Phase 1: Core Foundation & Security (Completed)
+- **Backend:** Node.js, Express.js, TypeScript, Mongoose ODM, Zod.
+- **Authentication:** JWT tokens issued on login, stored in HTTP-only cookies with Bearer fallback.
 - **Security & Password Hashing:** Bcrypt with 10 salt rounds.
-- **Role-Based Access Control (RBAC):** Middleware protecting endpoints by role:
-  - `civilian` (Students / University Members)
-  - `doctor` (Clinicians / Medical Staff)
-  - `pharmacy` (Pharmacists / Dispensary Staff)
-  - `admin` (Clinic Administrators)
-- **Input Validation:** Zod schemas for registration and login.
-- **Error Handling:** Centralized Express error handler and security headers with Helmet.
-- **Automated Verification:** 11/11 tests passing (`npm run test:auth`).
+- **RBAC Middleware:** Enforcing roles (`civilian`, `doctor`, `pharmacy`, `admin`).
+- **Tests:** 11/11 tests passing (`npm run test:auth`).
 
-### Frontend (`/client`)
-- **Technology:** React 18+ (Vite), TypeScript, Tailwind CSS, Lucide Icons, Zustand, React Router, TanStack Query.
-- **Auth Store:** Zustand-powered authentication state synced with HTTP-only cookies and `/api/v1/auth/me`.
-- **Protected Routing:** RBAC route guards (`ProtectedRoute`) that prevent unauthorized role access with clear 403 pages.
-- **Pages & Dashboards:**
-  - Landing / Hero Page (`/`)
-  - Login Page (`/login`)
-  - Student Registration Page (`/register`)
-  - Civilian / Student Dashboard (`/student`)
-  - Clinician / Doctor Dashboard with Critical Allergy Alert Banner (`/doctor`)
-  - Pharmacy Dispensation Portal (`/pharmacy`)
-  - Clinic Admin Operations Console (`/admin`)
+### Phase 2: Doctor Availability & Atomic Slot Booking (Completed)
+- **Availability Engine:** Discrete 30-minute time slot generation (e.g., 09:00 - 17:00, lunch break handled).
+- **Concurrency & Double-Booking Guard (`REQ_04`):**
+  - Atomic conditional locking (`DoctorAvailability.findOneAndUpdate` with filter `{ status: "available" }`).
+  - 5-minute checkout lock window with automatic lazy expiration cleanup.
+- **Booking Flow (`REQ_01`–`REQ_06`):**
+  - Date-based availability search by doctor.
+  - Appointment creation with status `"confirmed"` and human-readable appointment number (`APT-YYYYMMDD-XXXX`).
+  - Asynchronous email/SMS notification dispatch (`notification.service.ts`).
+  - Appointment cancellation endpoint with automatic time slot release.
+- **Frontend UI:**
+  - `SlotPicker.tsx`: Real-time color-coded time slot grid (Available, Held for 5m, Booked).
+  - `BookAppointmentPage.tsx`: Full booking flow with symptoms input and confirmation screen.
+  - `MyAppointmentsPage.tsx`: Student appointment manager with filter tabs and cancellation prompt.
+  - `DoctorSchedulePage.tsx`: Clinician working hours and shift configuration portal.
+- **Tests:** 10/10 tests passing (`npm --prefix server run test:booking`).
 
 ---
 
-## 🛠️ Quick Start
+## 📋 Next Phases Roadmap
+- **Phase 3:** Patient Medical Records, Point-of-Care Allergy Banners (`REQ 5.2`), Digital Prescriptions (`REQ 4.4`), Diagnostic Lab Orders (`REQ 4.5`), & Specialist Doctor Referrals (`REQ 4.6`).
+- **Phase 4:** Pharmacy Dispensation Tracking, Prescription Closure Guard (`REQ 4.7`), & S3/Cloudinary Clinical Reports (`REQ 4.3`).
+- **Phase 5:** Admin System Analytics, Audit Trail Logging & Compliance.
 
 ### 1. Prerequisites
 - Node.js 20+ LTS

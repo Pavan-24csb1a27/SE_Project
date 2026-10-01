@@ -4,6 +4,8 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
 import authRoutes from './routes/auth.routes';
+import availabilityRoutes from './routes/availability.routes';
+import appointmentRoutes from './routes/appointment.routes';
 import { errorHandler } from './middleware/error.middleware';
 
 export const createServer = (): Application => {
@@ -45,6 +47,8 @@ export const createServer = (): Application => {
 
   // 6. Mount API Routes
   app.use('/api/v1/auth', authRoutes);
+  app.use('/api/v1/availability', availabilityRoutes);
+  app.use('/api/v1/appointments', appointmentRoutes);
 
   // 7. 404 Handler
   app.use((_req: Request, res: Response) => {
