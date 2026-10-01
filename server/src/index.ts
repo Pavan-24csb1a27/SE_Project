@@ -8,17 +8,17 @@ const PORT = process.env.PORT || 5000;
 
 const startServer = async () => {
   try {
-    // 1. Connect to MongoDB
-    await connectDB();
-
-    // 2. Initialize Express application
+    // 1. Initialize Express application
     const app = createServer();
 
-    // 3. Start listening
+    // 2. Start listening immediately so Render port-binding detector passes
     const server = app.listen(PORT, () => {
       console.log(`[UniHealth Server] Running on http://localhost:${PORT}`);
       console.log(`[UniHealth Server] Environment: ${process.env.NODE_ENV || 'development'}`);
     });
+
+    // 3. Connect to MongoDB
+    await connectDB();
 
     // Graceful shutdown handling
     const gracefulShutdown = () => {
