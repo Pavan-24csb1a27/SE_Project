@@ -13,7 +13,8 @@
     "test:pharmacy": "ts-node src/tests/pharmacy_reports.test.ts",
     "test:admin": "ts-node src/tests/admin_analytics.test.ts",
     "test:master": "ts-node src/tests/master.test.ts",
-    "test:century": "ts-node src/tests/century_master.test.ts"
+    "test:century": "ts-node src/tests/century_master.test.ts",
+    "seed": "ts-node src/scripts/seed.ts"
   },
   "keywords": [
     "unihealth",

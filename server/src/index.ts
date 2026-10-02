@@ -3,6 +3,7 @@ dotenv.config();
 
 import { createServer } from './server';
 import { connectDB } from './config/db';
+import { autoSeedDemoData } from './services/seed.service';
 
 const PORT = process.env.PORT || 5000;
 
@@ -19,6 +20,9 @@ const startServer = async () => {
 
     // 3. Connect to MongoDB
     await connectDB();
+
+    // 4. Auto-seed initial staff and slots if database is empty
+    await autoSeedDemoData();
 
     // Graceful shutdown handling
     const gracefulShutdown = () => {
