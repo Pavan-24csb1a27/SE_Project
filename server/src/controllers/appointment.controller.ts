@@ -289,3 +289,61 @@ export const cancelAppointment = async (
     });
   }
 };
+
+// Mark appointment as completed (Doctor / Admin)
+export const completeAppointment = async (
+  req: AuthenticatedRequest,
+  res: Response
+): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.userId;
+    const role = req.user?.role;
+
+    if (!userId) {
+      res.status(401).json({ success: false, message: 'Unauthenticated.' });
+      return;
+    }
+
+    const appointment = await Appointment.findById(id);
+
+    if (!appointment) {
+      res.status(404).json({ success: false, message: 'Appointment not found.' });
+      return;
+    }
+
+    // Role check: Only assigned doctor or admin can mark appointment completed
+    if (role === 'doctor' && appointment.doctorId.toString() !== userId) {
+      res.status(403).json({ success: false, message: 'Cannot complete appointment of another clinician.' });
+      return;
+    }
+
+    appointment.status = 'completed';
+    await appointment.save();
+
+    // Audit Log
+    AuditService.log({
+      actorId: userId,
+      actorName: req.user?.universityId || 'Doctor',
+      actorRole: role as any,
+      action: 'APPOINTMENT_COMPLETED',
+      targetEntity: 'Appointment',
+      targetId: appointment._id.toString(),
+      details: {
+        appointmentNumber: appointment.appointmentNumber,
+      },
+      ipAddress: req.ip,
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Appointment marked as completed.',
+      appointment,
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to complete appointment.',
+    });
+  }
+};

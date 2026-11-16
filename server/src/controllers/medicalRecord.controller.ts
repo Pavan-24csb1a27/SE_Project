@@ -141,8 +141,21 @@ export const addConsultationNote = async (
     ).populate('visitHistory.doctorId', 'name specialization');
 
     // If an appointment was linked, transition its status to 'completed'
-    if (appointmentId && mongoose.Types.ObjectId.isValid(appointmentId)) {
-      await Appointment.findByIdAndUpdate(appointmentId, { status: 'completed' });
+    let targetAppointmentId = appointmentId;
+    if (!targetAppointmentId) {
+      const activeAppt = await Appointment.findOne({
+        civilianId: new mongoose.Types.ObjectId(civilianId),
+        doctorId: new mongoose.Types.ObjectId(doctorId),
+        status: 'confirmed',
+      }).sort({ createdAt: -1 });
+
+      if (activeAppt) {
+        targetAppointmentId = activeAppt._id;
+      }
+    }
+
+    if (targetAppointmentId && mongoose.Types.ObjectId.isValid(targetAppointmentId)) {
+      await Appointment.findByIdAndUpdate(targetAppointmentId, { status: 'completed' });
     }
 
     res.status(201).json({

@@ -82,6 +82,17 @@ export const appointmentApi = {
     return res.data;
   },
 
+  completeAppointment: async (
+    id: string
+  ): Promise<{ success: boolean; message: string; appointment: Appointment }> => {
+    const res = await apiClient.patch<{
+      success: boolean;
+      message: string;
+      appointment: Appointment;
+    }>(`/appointments/${id}/complete`);
+    return res.data;
+  },
+
   configureSchedule: async (data: {
     doctorId: string;
     date: string;

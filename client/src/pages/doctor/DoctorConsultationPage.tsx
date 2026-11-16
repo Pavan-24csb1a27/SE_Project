@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, useSearchParams, Link } from 'react-router-dom';
 import { clinicalApi } from '../../api/clinical.api';
 import { appointmentApi } from '../../api/appointment.api';
 import type { MedicalRecord, Prescription } from '../../types/clinical';
@@ -23,10 +23,14 @@ import {
 
 export const DoctorConsultationPage: React.FC = () => {
   const { civilianId } = useParams<{ civilianId: string }>();
+  const [searchParams] = useSearchParams();
+  const appointmentId = searchParams.get('appointmentId');
 
   const [patient, setPatient] = useState<User | null>(null);
   const [medicalRecord, setMedicalRecord] = useState<MedicalRecord | null>(null);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
+  const [appointmentStatus, setAppointmentStatus] = useState<string | null>(null);
+  const [markingComplete, setMarkingComplete] = useState(false);
   const [activeTab, setActiveTab] = useState<'notes' | 'prescription' | 'tests' | 'referral' | 'profile'>('notes');
 
   const [loading, setLoading] = useState(true);
@@ -67,14 +71,23 @@ export const DoctorConsultationPage: React.FC = () => {
       try {
         setLoading(true);
         setErrorMsg(null);
-        const [recordRes, doctorsRes] = await Promise.all([
+        const [recordRes, doctorsRes, apptsRes] = await Promise.all([
           clinicalApi.getPatientRecord(civilianId),
           appointmentApi.getDoctors(),
+          appointmentApi.getMyAppointments(),
         ]);
 
         setPatient(recordRes.civilian);
         setMedicalRecord(recordRes.record);
         setDoctors(doctorsRes.doctors);
+
+        // Find relevant appointment status
+        const currentAppt = apptsRes.appointments.find(
+          (a) => a._id === appointmentId || a.civilianId?._id === civilianId
+        );
+        if (currentAppt) {
+          setAppointmentStatus(currentAppt.status);
+        }
 
         if (doctorsRes.doctors.length > 0) {
           setSelectedSpecialistId(doctorsRes.doctors[0]._id);
@@ -88,9 +101,9 @@ export const DoctorConsultationPage: React.FC = () => {
     };
 
     loadData();
-  }, [civilianId]);
+  }, [civilianId, appointmentId]);
 
-  // Handle consultation note submit
+  // Handle consultation note submit & auto-complete
   const handleSaveNotes = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!civilianId || !diagnosis.trim() || !clinicalNotes.trim()) {
@@ -102,18 +115,42 @@ export const DoctorConsultationPage: React.FC = () => {
       setSavingNotes(true);
       setErrorMsg(null);
       const res = await clinicalApi.addConsultationNote(civilianId, {
+        appointmentId: appointmentId || undefined,
         diagnosis: diagnosis.trim(),
         clinicalNotes: clinicalNotes.trim(),
       });
 
       setMedicalRecord(res.record);
-      setActionSuccessMsg('Consultation note saved to patient history.');
+      setAppointmentStatus('completed');
+      setActionSuccessMsg('Consultation note saved & appointment marked as COMPLETED.');
       setDiagnosis('');
       setClinicalNotes('');
     } catch (err: any) {
       setErrorMsg(err.message || 'Failed to save consultation note.');
     } finally {
       setSavingNotes(false);
+    }
+  };
+
+  // Direct manual mark completed handler
+  const handleMarkCompleted = async () => {
+    try {
+      setMarkingComplete(true);
+      setErrorMsg(null);
+      if (appointmentId) {
+        await appointmentApi.completeAppointment(appointmentId);
+      } else {
+        await clinicalApi.addConsultationNote(civilianId!, {
+          diagnosis: diagnosis.trim() || 'General Consultation Completed',
+          clinicalNotes: clinicalNotes.trim() || 'Visit completed by clinician.',
+        });
+      }
+      setAppointmentStatus('completed');
+      setActionSuccessMsg('Appointment status successfully updated to COMPLETED.');
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Failed to mark appointment as completed.');
+    } finally {
+      setMarkingComplete(false);
     }
   };
 
@@ -260,6 +297,32 @@ export const DoctorConsultationPage: React.FC = () => {
             University ID: <span className="font-mono font-bold text-slate-700">{patient.universityId}</span> | Dept: {patient.department || 'Campus'} | Email: {patient.email}
           </p>
         </div>
+
+        {/* Appointment Status & Quick Complete Action */}
+        <div className="flex items-center gap-3">
+          {appointmentStatus === 'completed' ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3.5 py-1.5 text-xs font-bold text-emerald-800 border border-emerald-300 shadow-xs">
+              <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+              Appointment Completed
+            </span>
+          ) : (
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700 border border-amber-300">
+                <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
+                Confirmed / In Progress
+              </span>
+              <button
+                type="button"
+                onClick={handleMarkCompleted}
+                disabled={markingComplete}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-700 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-emerald-800 transition disabled:opacity-50"
+              >
+                <CheckCircle2 className="h-4 w-4" />
+                <span>{markingComplete ? 'Completing...' : 'Mark Completed'}</span>
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* REQ 5.2 SAFETY REQUIREMENT: PROMINENT CRITICAL ALLERGY ALERT BANNER */}
@@ -382,21 +445,46 @@ export const DoctorConsultationPage: React.FC = () => {
             />
           </div>
 
-          <div className="flex justify-end pt-2">
-            <button
-              type="submit"
-              disabled={savingNotes}
-              className="inline-flex items-center gap-2 rounded-lg bg-emerald-700 px-5 py-2.5 text-xs font-semibold text-white shadow hover:bg-emerald-800 disabled:opacity-50 transition"
-            >
-              {savingNotes ? (
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-slate-100">
+            <div className="text-xs text-slate-500">
+              {appointmentStatus === 'completed' ? (
+                <span className="text-emerald-700 font-semibold flex items-center gap-1">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                  Appointment is marked as COMPLETED.
+                </span>
               ) : (
-                <>
-                  <Save className="h-4 w-4" />
-                  <span>Save Consultation Notes to History</span>
-                </>
+                <span>Saving notes will save diagnosis to patient history & mark appointment as <strong>Completed</strong>.</span>
               )}
-            </button>
+            </div>
+
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              {appointmentStatus !== 'completed' && (
+                <button
+                  type="button"
+                  onClick={handleMarkCompleted}
+                  disabled={markingComplete}
+                  className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 transition"
+                >
+                  <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                  <span>{markingComplete ? 'Completing...' : 'Complete Without Notes'}</span>
+                </button>
+              )}
+
+              <button
+                type="submit"
+                disabled={savingNotes}
+                className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-700 px-5 py-2.5 text-xs font-semibold text-white shadow hover:bg-emerald-800 disabled:opacity-50 transition"
+              >
+                {savingNotes ? (
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                ) : (
+                  <>
+                    <Save className="h-4 w-4" />
+                    <span>Save Consultation & Complete</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </form>
       )}

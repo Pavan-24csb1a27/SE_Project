@@ -3,6 +3,7 @@ import {
   bookAppointment,
   getMyAppointments,
   cancelAppointment,
+  completeAppointment,
 } from '../controllers/appointment.controller';
 import { verifyAuth } from '../middleware/auth.middleware';
 import { requireRoles } from '../middleware/rbac.middleware';
@@ -34,6 +35,13 @@ router.patch(
   requireRoles('civilian', 'doctor', 'admin'),
   validateRequest(cancelAppointmentSchema),
   cancelAppointment
+);
+
+// Complete appointment
+router.patch(
+  '/:id/complete',
+  requireRoles('doctor', 'admin'),
+  completeAppointment
 );
 
 export default router;
